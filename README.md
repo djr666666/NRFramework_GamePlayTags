@@ -463,32 +463,36 @@ namespace NRFramework.GameplayTags
 
 上面两个类就是业务里查身上有没有标签的全部。能不能放，也是拿它们的 `HasTag` 来写。
 
-### GameplayTagRequirements：按下火球，写出为什么放不了
+### GameplayTagRequirements：拿火球的规则，去问身上的容器
 
-想做的事：玩家按下火球。放得了就打出去，放不了就在界面上写一句原因。
+两个容器里是这个人身上的标签。`AddTag` 放进去，`HasTag` 问一条，返回 true 或 false。问完这一条就停，它不会继续问下一条，也不会造出「缺少施法」这句话。
 
-有什么用：条件是「必须正在施法，不能处于控制」。这个类按身上的标签给出放不放，以及那句原因。
+这个类里面放的不是身上的标签。放的是火球的规则，你自己写进去，一共两条：
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
-cast.Require(Tags.State.Combat.Casting);
-cast.Forbid(Tags.State.Control.Tag);
+cast.Require(Tags.State.Combat.Casting); // 规则 1：身上必须有正在施法
+cast.Forbid(Tags.State.Control.Tag);     // 规则 2：身上不能有控制
+```
+
+这就是「一整份」。先往 `Body` 里加标签，再拿这份规则去问它：
+
+```csharp
+Body.AddTag(Tags.State.Combat.Casting);
+Body.AddTag(Tags.State.Control.Frozen);
 
 string blockedBy;
 bool ok = cast.IsMet(Body, out blockedBy);
 ```
 
-结果就这三种：
+`IsMet` 按规则的顺序问 `Body.HasTag`：
 
-| 身上现在有什么 | ok | blockedBy |
-| --- | --- | --- |
-| 有正在施法，没有冰冻，没有沉默 | true | null。火球打出去 |
-| 没有正在施法 | false | 缺少 State.Combat.Casting |
-| 有正在施法，并且有冰冻 | false | 不能有 State.Control |
+1. 规则 1 问 `Body.HasTag(正在施法)`。身上有，得到 true，这条过了，继续。
+2. 规则 2 问 `Body.HasTag(控制)`。身上有冰冻，冰冻算控制，得到 true。这条规则是「不能有」，所以没过。它停在这里。`ok` 是 false，`blockedBy` 是「不能有 State.Control」。
 
-沉默和冰冻一样，都算控制，结果也是「不能有 State.Control」。界面上把 `blockedBy` 显示出来。
+身上只有正在施法、没有冰冻时：第 1 问是 true，第 2 问是 false。false 表示身上没有控制，「不能有」这条也过。两条都过，`ok` 是 true，`blockedBy` 是 null，火球打出去。
 
-只要放不放就行、不用那句原因时，写 `Body.HasTag(Tags.State.Combat.Casting) && !Body.HasTag(Tags.State.Control.Tag)`。这个类可以不 `new`。
+身上连正在施法都没有时：第 1 问就是 false。它停在规则 1，`blockedBy` 是「缺少 State.Combat.Casting」，规则 2 不再问。
 
 | 写法 | 作用 |
 | --- | --- |
