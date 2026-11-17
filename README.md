@@ -125,48 +125,58 @@ public void Freeze()
 
 后面的例子用 `Body`，避免和导出的 `Tags` 混在一起。
 
-容器里是一张清单，只记下你调用过 `AddTag` 的名字。加了冰冻，清单里就是「冰冻」这一条。「控制」是冰冻的上级，不会因此被写进清单。
+示例里，冰冻和沉默都挂在控制下面：
 
-先挂上冰冻：
-
-```csharp
-bool added = Body.AddTag(Tags.State.Control.Frozen);
+```
+控制
+├─ 冰冻
+└─ 沉默
 ```
 
-`added` 为 true 表示这一次写进了清单。已经有冰冻时再加一次，返回 false，清单不变。传入空标签也返回 false。
-
-挂上之后，两句问法不一样：
+给角色加上冰冻：
 
 ```csharp
-bool frozen = Body.HasTagExact(Tags.State.Control.Frozen);
-// true。清单里有「冰冻」，名字完全一样。
-
-bool wroteControl = Body.HasTagExact(Tags.State.Control.Tag);
-// false。没有对「控制」调用过 AddTag，清单里没有这一条。
-
-bool controlled = Body.HasTag(Tags.State.Control.Tag);
-// true。HasTag 会往下看。冰冻挂在控制下面，问「有没有控制」算有。
+Body.AddTag(Tags.State.Control.Frozen);
 ```
 
-卸下也只认清单里的那一条：
+角色身上记下的就是「冰冻」这两个字。
+
+控制下面还有别的标签，所以控制自己写成 `Tags.State.Control.Tag`。冰冻没有下级，写成 `Tags.State.Control.Frozen`。
+
+**HasTagExact：问的就是这一个名字。**
 
 ```csharp
-bool removedControl = Body.RemoveTag(Tags.State.Control.Tag);
-// false。清单里是冰冻，不是控制，什么也没删。
-
-bool removedFrozen = Body.RemoveTag(Tags.State.Control.Frozen);
-// true。冰冻从清单里消失。这之后 HasTag(控制) 也变成 false。
+Body.HasTagExact(Tags.State.Control.Frozen); // true，身上有冰冻
+Body.HasTagExact(Tags.State.Control.Tag);    // false，身上记下的名字是冰冻
 ```
 
-`Clear()` 把这个人身上的标签一次清掉，对象回收进对象池时用。
+**HasTag：问这一支里有没有任何一个。**
+
+冰冻算控制，沉默也算控制。身上有冰冻时：
+
+```csharp
+Body.HasTag(Tags.State.Control.Tag); // true
+```
+
+身上换成只有沉默，问控制仍是 true。冰冻和沉默都没有时，问控制是 false。
+
+技能被控制打断时用 `HasTag(控制)`。要区分是冰冻还是沉默时，用 `HasTagExact`。
+
+**卸下时写加上的那个名字。**
+
+```csharp
+Body.RemoveTag(Tags.State.Control.Frozen); // 冰冻被卸掉
+```
+
+`RemoveTag(控制)` 不会把冰冻卸掉。加上的名字是冰冻，卸也写冰冻。卸掉之后，再问控制就是 false。
+
+同一条再 `AddTag` 一次，返回 false，身上还是这一条。`Clear()` 一次清掉这个人身上的全部标签，对象回对象池时用。
 
 ---
 
-## 第 4 步：为什么有冰冻，问控制也算有
+## 第 4 步：这一问为什么很快
 
-`State.Control.Frozen` 挂在 `State.Control` 下面。清单里只存了冰冻这一条。`HasTagExact` 只看清单里有没有这个名字。`HasTag` 还会把下面的标签算进去，所以问控制也算有。
-
-如果清单里只有「控制」、没有冰冻，`HasTagExact(Tags.State.Control.Frozen)` 是 false，`HasTag(Tags.State.Control.Frozen)` 也是 false。上级问下级不算有。
+第 3 步已经用冰冻和控制分过两种问法。这里只补它为什么快。
 
 名字是一棵树。`State.Control.Frozen` 就是 State → Control → Frozen。资源里只存你登记的那一条，中间的父节点是保存时补上的。建表之后每个标签有一段连续编号，父标签的子孙都落在它的编号范围里，所以这一问不用拆字符串。
 
