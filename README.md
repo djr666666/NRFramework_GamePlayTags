@@ -455,6 +455,33 @@ namespace NRFramework.GameplayTags
 
 一条规则用一次 `Require` 或 `Forbid`。两条就写两行，四条就写四行。它按顺序问，停在第一条没过的上面。
 
+一百个技能就一百份规则，每份在技能配好时 `new` 一次，存在这个技能上。按下哪个技能，就只问那一份。不是每次按键都 `new`，也不是每帧把一百个都问一遍。
+
+```csharp
+public sealed class Fireball : MonoBehaviour
+{
+    GameplayTagRequirements _rule; // 这一份一直留着
+
+    void Awake()
+    {
+        _rule = new GameplayTagRequirements();
+        _rule.Require(Tags.State.Combat.Casting);
+        _rule.Forbid(Tags.State.Control.Tag);
+    }
+
+    public void OnPress(GameplayTagContainer body)
+    {
+        string blockedBy;
+        if (_rule.IsMet(body, out blockedBy))
+            Shoot();
+        else
+            Show(blockedBy);
+    }
+}
+```
+
+技能栏要把一百个图标都刷成灰色时，才一百份各问一次。之前测过，四百个人各问几条标签大约 0.006 毫秒。一百个技能问同一个人，比那个还少。一帧有 16.7 毫秒。
+
 火球：必须正在施法，不能处于控制。冰冻、眩晕都挂在控制下面，写一条「不能有控制」就同时拦住这两个。
 
 ```csharp
