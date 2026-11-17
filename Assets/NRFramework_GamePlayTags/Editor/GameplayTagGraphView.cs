@@ -490,7 +490,7 @@ namespace NRFramework.GameplayTags
             GameplayTagNode node;
             if (string.IsNullOrEmpty(fullName) || !_byName.TryGetValue(fullName, out node))
                 return;
-            Rect rect = node.GetPosition();
+            Rect rect = ReadPosition(node);
             float scale = viewTransform.scale.x;
             if (scale < 0.35f || float.IsNaN(scale))
                 scale = 1f;
@@ -645,11 +645,23 @@ namespace NRFramework.GameplayTags
             return names;
         }
 
+        static Rect ReadPosition(Node node)
+        {
+            Rect rect = node.GetPosition();
+            if (!float.IsNaN(rect.x) && !float.IsNaN(rect.y) && rect.width > 1f)
+                return rect;
+
+            Rect laid = node.layout;
+            if (!float.IsNaN(laid.x) && !float.IsNaN(laid.y))
+                return laid;
+            return rect;
+        }
+
         Dictionary<string, Rect> CapturePositions()
         {
             Dictionary<string, Rect> kept = new Dictionary<string, Rect>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, GameplayTagNode> pair in _byName)
-                kept[MapRenamed(pair.Key)] = pair.Value.GetPosition();
+                kept[MapRenamed(pair.Key)] = ReadPosition(pair.Value);
             _renames.Clear();
             return kept;
         }
@@ -887,7 +899,7 @@ namespace NRFramework.GameplayTags
             capabilities = Capabilities.Selectable | Capabilities.Movable | Capabilities.Ascendable | Capabilities.Snappable;
 
             Color titleColor = explicitTag ? accent : Color.Lerp(accent, new Color(0.12f, 0.12f, 0.14f), 0.42f);
-            VisualElement titleBar = this.Q("title");
+            VisualElement titleBar = titleContainer != null ? titleContainer : this.Q("title");
             if (titleBar != null)
                 titleBar.style.backgroundColor = titleColor;
 
@@ -899,9 +911,14 @@ namespace NRFramework.GameplayTags
                 titleLabel.style.fontSize = 13;
             }
 
-            VisualElement collapse = this.Q("collapse-button");
-            if (collapse != null)
-                collapse.style.display = DisplayStyle.None;
+            if (titleButtonContainer != null)
+                titleButtonContainer.style.display = DisplayStyle.None;
+            else
+            {
+                VisualElement collapse = this.Q("collapse-button");
+                if (collapse != null)
+                    collapse.style.display = DisplayStyle.None;
+            }
 
             Color body = new Color(0.15f, 0.16f, 0.18f);
             VisualElement border = this.Q("node-border");

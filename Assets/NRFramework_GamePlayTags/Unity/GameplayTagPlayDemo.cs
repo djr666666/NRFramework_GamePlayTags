@@ -54,13 +54,34 @@ namespace NRFramework.GameplayTags
             }
         }
 
-        void Update()
+        void OnGUI()
         {
-            if (!_ready)
+            if (_ready)
+                ReadKeys();
+
+            if (_style == null)
+            {
+                _style = new GUIStyle(GUI.skin.box);
+                _style.fontSize = 18;
+                _style.alignment = TextAnchor.UpperLeft;
+                _style.normal.textColor = Color.white;
+                _style.wordWrap = true;
+                _style.padding = new RectOffset(12, 12, 12, 12);
+            }
+
+            GUI.Box(new Rect(16f, 16f, 560f, 520f), _screen, _style);
+        }
+
+        void ReadKeys()
+        {
+            Event evt = Event.current;
+            if (evt == null || evt.type != EventType.KeyDown)
+                return;
+            if (evt.alt || evt.control || evt.command)
                 return;
 
             bool changed = false;
-            if (Input.GetKeyDown(KeyCode.Q))
+            if (evt.keyCode == KeyCode.Q)
             {
                 bool had = _player.HasTagExact(_frozen);
                 if (had)
@@ -70,19 +91,19 @@ namespace NRFramework.GameplayTags
                 Debug.Log((had ? "去掉 " : "加上 ") + _frozen.Name);
                 changed = true;
             }
-            if (Input.GetKeyDown(KeyCode.E))
+            else if (evt.keyCode == KeyCode.E)
             {
                 int count = _playerBurns.AddTag(_burning);
                 Debug.Log("加上 " + _burning.Name + "，份数 " + count);
                 changed = true;
             }
-            if (Input.GetKeyDown(KeyCode.R))
+            else if (evt.keyCode == KeyCode.R)
             {
                 int count = _playerBurns.RemoveTag(_burning);
                 Debug.Log("去掉一份 " + _burning.Name + "，份数 " + count);
                 changed = true;
             }
-            if (Input.GetKeyDown(KeyCode.T))
+            else if (evt.keyCode == KeyCode.T)
             {
                 _swordWorn = !_swordWorn;
                 _sword.SetParent(_swordWorn ? _hero : null);
@@ -90,8 +111,11 @@ namespace NRFramework.GameplayTags
                     "角色燃烧份数 " + _hero.GetCount(_burning));
                 changed = true;
             }
-            if (changed)
-                Refresh();
+
+            if (!changed)
+                return;
+            evt.Use();
+            Refresh();
         }
 
         void Refresh()
@@ -114,21 +138,6 @@ namespace NRFramework.GameplayTags
                 "角色沉默：" + YesNo(_hero.HasTag(_silenced)) + "\n" +
                 "角色问控制：" + YesNo(_hero.HasTag(_control)) + "\n" +
                 "角色燃烧份数：" + _hero.GetCount(_burning);
-        }
-
-        void OnGUI()
-        {
-            if (_style == null)
-            {
-                _style = new GUIStyle(GUI.skin.box);
-                _style.fontSize = 18;
-                _style.alignment = TextAnchor.UpperLeft;
-                _style.normal.textColor = Color.white;
-                _style.wordWrap = true;
-                _style.padding = new RectOffset(12, 12, 12, 12);
-            }
-
-            GUI.Box(new Rect(16f, 16f, 560f, 520f), _screen, _style);
         }
 
         static string NamesOf(GameplayTagContainer container)
