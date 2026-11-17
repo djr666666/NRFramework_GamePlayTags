@@ -284,11 +284,11 @@ bool stillControlled = hero.HasTag(Tags.State.Control.Tag);
 
 ## 第 8 步：GameplayTagLink，给策划一个下拉框
 
-前面的示例用不到它，场景里也不会自己出现。按 Q 的演示是代码里直接写 `Tags.State.Control.Frozen`。
+标签编辑器和 `GameplayTagCatalog` 的 Inspector 上都没有这个下拉框。按 Q 的演示也没有。那些地方用的是代码里的 `Tags.XXX`。
 
 代码里已经知道是哪一个标签时，继续写 `Tags.XXX`，这一步跳过。
 
-要让策划在 Inspector 里自己选时，才把字段类型写成 `GameplayTagLink`。选中挂了这个脚本的物体，这一栏是一个下拉按钮，点开就是标签表里的名字，例如 `State/Burning`。选中的名字会存在这个组件上。
+要让策划在物体上自己选时，在你的脚本里加一个字段，类型写成 `GameplayTagLink`。脚本挂到场景里的物体上，选中那个物体，Inspector 里这个字段是一个下拉按钮，字样是「点这里选择」。点开就是标签表，名字按 `State/Burning` 这样排。选中的名字存在这个组件上。
 
 ```csharp
 public sealed class IgniteSkill : MonoBehaviour
@@ -452,45 +452,90 @@ namespace NRFramework.GameplayTags
 | `Burns.SetParent(hero)` | 把这一份算进 `hero`。已经加过的份数会一起算进去。 |
 | `Burns.SetParent(null)` | 卸下。只收回这一份自己的份数，父容器上别人的份数还在。 |
 
-### GameplayTagRequirements
+下面三样都不是「给角色挂标签」。挂标签、问身上有没有，用前面的 `Body` 和 `Tags.XXX`。
 
-一次施放的条件。配好时 new 一次，每次施放拿容器去问。
+### GameplayTagRequirements：这一下能不能放
 
-| 写法 | 作用 |
-| --- | --- |
-| `new GameplayTagRequirements()` | 做出一份条件。 |
-| `cast.Require(tag)` | 必须有这个标签。它下面的标签也算有。 |
-| `cast.Forbid(tag)` | 不能有这个标签。它下面的标签也算有，会拦住。 |
-| `cast.IsMet(Body)` | 条件过不过。`Body` 可以是有无容器，也可以是计数容器。 |
-| `cast.IsMet(Body, out blockedBy)` | 同上。不过时 `blockedBy` 是「缺少 某标签」或「不能有 某标签」。过了则 `blockedBy` 为 null。 |
+一份条件单。技能配好时 `new` 一次，以后每次施放拿角色身上的容器来问。
 
-同一个标签不能又 `Require` 又 `Forbid`。空标签也不能写进条件。
+火球的例子：必须正在施法，而且不能处于控制。冰冻和沉默都挂在控制下面，身上有其中一个，这一下就不许放。
 
-### GameplayTagLink
+```csharp
+GameplayTagRequirements cast = new GameplayTagRequirements();
+cast.Require(Tags.State.Combat.Casting);
+cast.Forbid(Tags.State.Control.Tag);
 
-在组件上点选一个标签。结构体，Unity 自己序列化。
-
-| 写法 | 作用 |
-| --- | --- |
-| `public GameplayTagLink Effect;` | Inspector 里点选。一般不用在代码里 new。 |
-| `new GameplayTagLink("State.Burning")` | 代码里按名字做一份链接。 |
-| `link.Name` | 存下来的名字。还没选时是空字符串。 |
-| `link.IsEmpty` | 还没选标签。 |
-| `link.Resolve()` | 换成 `GameplayTag`。这一条还没保存配置时，会告诉你哪个名字没导出。 |
-
-### GameplayTagLibrary
-
-静态类，不能 new。保存配置生成的代码会在加载时自己装表。
+string blockedBy;
+if (cast.IsMet(Body, out blockedBy))
+{
+    // 可以放
+}
+else
+{
+    // blockedBy 是「缺少 State.Combat.Casting」或「不能有 State.Control」
+}
+```
 
 | 写法 | 作用 |
 | --- | --- |
-| `GameplayTagLibrary.IsReady` | 导出的表装上了没有。 |
-| `GameplayTagLibrary.Get("State.Burning")` | 按字符串取标签。没有这个名字会抛异常，异常里写明要先保存配置。 |
-| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 按字符串试取。没有返回 false。 |
-| `GameplayTagLibrary.Use(catalog)` | 核对这份资源里的名字是不是都已经导出。有没导出的会指出名字。都有就什么也不做。 |
-| `GameplayTagLibrary.Install(map)` | 把导出的表装进来。生成的 `Tags.cs` 在加载时调用。业务代码不用自己调。 |
+| `new GameplayTagRequirements()` | 做出这份条件单。 |
+| `cast.Require(tag)` | 加上一条「必须有」。它下面的标签也算有。 |
+| `cast.Forbid(tag)` | 加上一条「不能有」。它下面的标签也算有，会拦住。 |
+| `cast.IsMet(Body)` | 问这个人过不过。过了返回 true。 |
+| `cast.IsMet(Body, out blockedBy)` | 同上。没过时 `blockedBy` 写明缺哪条，或不能有哪条。 |
 
-平常用 `Tags.XXX`。手里只有字符串时才用 `Get` 或 `TryGet`。
+`Body` 换成灼烧那种计数容器也可以问。同一个标签不要又 `Require` 又 `Forbid`。
+
+### GameplayTagLink：策划在 Inspector 里选一个标签
+
+代码里已经写了 `Tags.State.Burning`，就不用它。标签编辑器上也不会出现这个下拉框。
+
+要让策划自己选时，在脚本里加一个字段，把脚本挂到物体上，选中那个物体：
+
+```csharp
+public GameplayTagLink Effect;
+```
+
+Inspector 里 `Effect` 是一个按钮，字样是「点这里选择」。点开是 `State/Burning` 这种名字。选中的只是名字，还不能直接 `AddTag`。挂到人身上之前先换成标签值：
+
+```csharp
+if (Effect.IsEmpty)
+    return;
+actor.Burns.AddTag(Effect.Resolve());
+```
+
+| 写法 | 作用 |
+| --- | --- |
+| `public GameplayTagLink Effect;` | 在物体上留一个下拉框。 |
+| `Effect.IsEmpty` | 策划还没选。这时不要调用 `Resolve`。 |
+| `Effect.Name` | 选中的名字，例如 `"State.Burning"`。 |
+| `Effect.Resolve()` | 把名字换成能 `AddTag` 的标签值。这一条还没保存配置时，会告诉你是哪个名字。 |
+
+### GameplayTagLibrary：手里只有一段字符串时才用
+
+平时写 `Tags.State.Burning`。保存配置之后，生成的代码会自己把表装好，业务里不用 `new`，也不用自己装表。
+
+下拉框里选中的是一段字符串。`Effect.Resolve()` 内部就是按这段字符串来取。存档读出来也是字符串时，同样用它：
+
+```csharp
+GameplayTag tag = GameplayTagLibrary.Get("State.Burning");
+Body.AddTag(tag);
+```
+
+名字在标签表里没有时，`Get` 会报错，并提示先点保存配置。不确定有没有这个名字时：
+
+```csharp
+GameplayTag tag;
+if (GameplayTagLibrary.TryGet("State.Burning", out tag))
+    Body.AddTag(tag);
+```
+
+| 写法 | 作用 |
+| --- | --- |
+| `GameplayTagLibrary.Get("State.Burning")` | 用字符串取出标签。没有这个名字会报错。 |
+| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 同样是取。没有这个名字时返回 false，不报错。 |
+| `GameplayTagLibrary.IsReady` | 导出的表装上了没有。保存配置之后，进游戏时一般已经是 true。 |
+| `GameplayTagLibrary.Use(catalog)` | 拿标签表资源对一遍名字。有没导出的会指出是哪一条。平常可以不调用。 |
 
 ### GameplayTagCatalog
 
