@@ -224,30 +224,11 @@ bool stillBurning = Burns.HasTag(Tags.State.Burning);
 
 ---
 
-## 第 6 步：能不能放，直接问身上的容器
+## 第 6 步：按火球时，告诉玩家为什么放不了
 
-能不能放，用第 3 步那个 `Body` 判断就行。必须正在施法，并且不能处于控制：
+玩家按下火球。想知道两件事：这一下放不放得了；放不了的话，界面上写哪一句。
 
-```csharp
-bool canCast = Body.HasTag(Tags.State.Combat.Casting)
-    && !Body.HasTag(Tags.State.Control.Tag);
-```
-
-冰冻和沉默都挂在控制下面，`HasTag(控制)` 已经把它们算进去了。灼烧层数放在计数容器里时，把 `Body` 换成 `Burns`，还是这句 `HasTag`。
-
-`HasTag` 已经能判断能不能放。火球、冰箭、治疗如果是同一套规则，自己写一个方法，三个技能都调用它：
-
-```csharp
-bool CanCast(GameplayTagContainer body)
-{
-    return body.HasTag(Tags.State.Combat.Casting)
-        && !body.HasTag(Tags.State.Control.Tag);
-}
-```
-
-改规则只改这一个方法。这样写就够了，不用 `GameplayTagRequirements`。
-
-那个类里面还是在调用 `HasTag`，没有另一种查询。它多出来的只有两件事：条件用 `Require` / `Forbid` 一条条放进一个对象，不通过时用一句话告诉你卡在哪一条。不需要这两件，就不要 `new` 它。
+条件就两条：身上要有「正在施法」，身上不能有「控制」。冰冻和沉默都算控制。
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
@@ -256,9 +237,21 @@ cast.Forbid(Tags.State.Control.Tag);
 
 string blockedBy;
 bool ok = cast.IsMet(Body, out blockedBy);
-// ok 和 CanCast(Body) 结果相同
-// 不过时 blockedBy 是「缺少 State.Combat.Casting」或「不能有 State.Control」
+if (ok)
+    ShootFireball();
+else
+    Show(blockedBy);
 ```
+
+三种身上的情况，结果是固定的：
+
+| 身上现在有什么 | ok | 界面上的字 |
+| --- | --- | --- |
+| 有正在施法，没有冰冻，没有沉默 | true | 不显示。火球打出去 |
+| 没有正在施法 | false | 缺少 State.Combat.Casting |
+| 有正在施法，并且有冰冻 | false | 不能有 State.Control |
+
+只要界面上要出现那句原因，就用这个类。只要知道放不放得了、不用写出原因，直接写 `Body.HasTag(...)` 就行。
 
 ---
 
@@ -470,21 +463,11 @@ namespace NRFramework.GameplayTags
 
 上面两个类就是业务里查身上有没有标签的全部。能不能放，也是拿它们的 `HasTag` 来写。
 
-### GameplayTagRequirements：可以不用
+### GameplayTagRequirements：按下火球，写出为什么放不了
 
-判断能不能放，写 `HasTag`，或者自己包一个方法。火球、冰箭、治疗规则一样时：
+想做的事：玩家按下火球。放得了就打出去，放不了就在界面上写一句原因。
 
-```csharp
-bool CanCast(GameplayTagContainer body)
-{
-    return body.HasTag(Tags.State.Combat.Casting)
-        && !body.HasTag(Tags.State.Control.Tag);
-}
-```
-
-三个技能都调用 `CanCast(Body)`。这就是全部。
-
-`GameplayTagRequirements` 里面还是 `HasTag`。它只多两件事：条件用 `Require` / `Forbid` 放进一个对象，不通过时告诉你卡在哪一条。不需要这两件，不要 `new` 这个类。
+有什么用：条件是「必须正在施法，不能处于控制」。这个类按身上的标签给出放不放，以及那句原因。
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
@@ -495,7 +478,17 @@ string blockedBy;
 bool ok = cast.IsMet(Body, out blockedBy);
 ```
 
-`ok` 和 `CanCast(Body)` 结果相同。不过时 `blockedBy` 是「缺少 State.Combat.Casting」或「不能有 State.Control」。`Body` 换成计数容器也行。
+结果就这三种：
+
+| 身上现在有什么 | ok | blockedBy |
+| --- | --- | --- |
+| 有正在施法，没有冰冻，没有沉默 | true | null。火球打出去 |
+| 没有正在施法 | false | 缺少 State.Combat.Casting |
+| 有正在施法，并且有冰冻 | false | 不能有 State.Control |
+
+沉默和冰冻一样，都算控制，结果也是「不能有 State.Control」。界面上把 `blockedBy` 显示出来。
+
+只要放不放就行、不用那句原因时，写 `Body.HasTag(Tags.State.Combat.Casting) && !Body.HasTag(Tags.State.Control.Tag)`。这个类可以不 `new`。
 
 | 写法 | 作用 |
 | --- | --- |
