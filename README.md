@@ -32,27 +32,29 @@ using NRFramework.GameplayTags;
 
 ---
 
-## 第 1 步：先做出名字
+## 第 1 步：打开编辑器，示例会自己出现
 
-标签不是在代码里现编的字符串。先在编辑器里登记，再点保存，才会有 `Tags.State.Control.Frozen` 这种字段。
+菜单 `NRFramework/Gameplay Tags/标签编辑器`。
 
-1. 菜单 `NRFramework/Gameplay Tags/标签编辑器`。
-2. 点「添加」，写下 `State.Control.Frozen`。父名字 `State`、`State.Control` 会自动出现，不用单独登记。
-3. 再加几条你马上要用的，例如 `State.Burning`、`State.Control.Silenced`、`State.Combat.Casting`。
-4. 父子关系：从父标签**右边**的圆点拖到子标签**左边**。点中一条线，按 Delete，或右键「取消连线」，线就拆了。
-5. 点绿色的 **保存配置**。
+包里已经带了一份示例标签表，里面有冰冻、灼烧、沉默这些名字。编辑器一打开，会把这份表复制到你自己的工程：
 
-保存之后，工程里出现文件夹 `Assets/GameplayTags/`：
+`Assets/GameplayTags/GameplayTagCatalog`
+
+选中它，Inspector 上能看到已经登记了二十多条，也有注释。这些不用你一条条手打。
+
+然后点绿色的 **保存配置**。同目录下会再出现三个文件，也是自动写的：
 
 | 文件 | 你要不要改 |
 |---|---|
-| `Tags.cs` | 不要改。下次点保存配置会整文件重写。 |
+| `Tags.cs` | 不要改。下次点保存配置会整文件重写。里面就是 `Tags.State.Control.Frozen` 这些字段。 |
 | `Tags.User.cs` | 要加自己的方法时改这个。保存配置不会覆盖它。 |
 | `NRFramework.GameplayTags.Generated.asmdef` | 不要改。它让导出的代码能看见这个包。 |
 
-到这里，名字准备好了。还没有挂到任何角色身上。
+到这里就可以在代码里直接点 `Tags.State.Control.Frozen`。还没有挂到任何角色身上，挂标签从第 3 步开始。
 
-想先看别人写好的演示：菜单 `NRFramework/Gameplay Tags/场景里放按 Q 演示`，播放后 Q 挂冰冻，E / R 加减灼烧，T 戴上或卸下剑。演示能跑，只说明包装上了。你自己的角色还是要按下面的步骤写。
+想改名字或加新标签，就在这张图里改，改完再点一次保存配置。父名字 `State`、`State.Control` 会自动出现，不用单独登记。父子关系从父标签**右边**的圆点拖到子标签**左边**。点中一条线，按 Delete，或右键「取消连线」，线就拆了。
+
+场景里如果多了一个叫「GameplayTag按Q演示」的物体，那是菜单 `NRFramework/Gameplay Tags/场景里放按 Q 演示` 放进去的。播放后 Q 挂冰冻，E / R 加减灼烧，T 戴上或卸下剑。它只是演示，不用的话从 Hierarchy 里删掉即可。
 
 ---
 
@@ -123,16 +125,38 @@ public void Freeze()
 
 后面的例子用 `Body`，避免和导出的 `Tags` 混在一起。
 
-常用的四句：
+容器里是一张清单，只记下你调用过 `AddTag` 的名字。加了冰冻，清单里就是「冰冻」这一条。「控制」是冰冻的上级，不会因此被写进清单。
+
+先挂上冰冻：
 
 ```csharp
-Body.AddTag(Tags.State.Control.Frozen);          // 挂上。已经有了就什么也不做
-Body.RemoveTag(Tags.State.Control.Frozen);       // 卸下亲手挂上的那一条
-bool frozen = Body.HasTagExact(Tags.State.Control.Frozen); // 是不是亲手挂了冰冻
-bool controlled = Body.HasTag(Tags.State.Control.Tag);      // 身上有没有任何一种控制
+bool added = Body.AddTag(Tags.State.Control.Frozen);
 ```
 
-`AddTag` 返回 `false` 表示没挂上：要么是空标签，要么这条已经在身上。
+`added` 为 true 表示这一次写进了清单。已经有冰冻时再加一次，返回 false，清单不变。传入空标签也返回 false。
+
+挂上之后，两句问法不一样：
+
+```csharp
+bool frozen = Body.HasTagExact(Tags.State.Control.Frozen);
+// true。清单里有「冰冻」，名字完全一样。
+
+bool wroteControl = Body.HasTagExact(Tags.State.Control.Tag);
+// false。没有对「控制」调用过 AddTag，清单里没有这一条。
+
+bool controlled = Body.HasTag(Tags.State.Control.Tag);
+// true。HasTag 会往下看。冰冻挂在控制下面，问「有没有控制」算有。
+```
+
+卸下也只认清单里的那一条：
+
+```csharp
+bool removedControl = Body.RemoveTag(Tags.State.Control.Tag);
+// false。清单里是冰冻，不是控制，什么也没删。
+
+bool removedFrozen = Body.RemoveTag(Tags.State.Control.Frozen);
+// true。冰冻从清单里消失。这之后 HasTag(控制) 也变成 false。
+```
 
 `Clear()` 把这个人身上的标签一次清掉，对象回收进对象池时用。
 
@@ -140,9 +164,9 @@ bool controlled = Body.HasTag(Tags.State.Control.Tag);      // 身上有没有�
 
 ## 第 4 步：为什么有冰冻，问控制也算有
 
-`State.Control.Frozen` 挂在 `State.Control` 下面。容器里只存了冰冻这一条。问 `HasTag(Tags.State.Control.Tag)` 时，会看身上的冰冻是不是控制的子孙。是，就算这个人处于控制。
+`State.Control.Frozen` 挂在 `State.Control` 下面。清单里只存了冰冻这一条。`HasTagExact` 只看清单里有没有这个名字。`HasTag` 还会把下面的标签算进去，所以问控制也算有。
 
-反过来，身上只有「控制」本身、没有冰冻时，`HasTagExact(Tags.State.Control.Frozen)` 是 false。问父标签很宽，问叶子很严。
+如果清单里只有「控制」、没有冰冻，`HasTagExact(Tags.State.Control.Frozen)` 是 false，`HasTag(Tags.State.Control.Frozen)` 也是 false。上级问下级不算有。
 
 名字是一棵树。`State.Control.Frozen` 就是 State → Control → Frozen。资源里只存你登记的那一条，中间的父节点是保存时补上的。建表之后每个标签有一段连续编号，父标签的子孙都落在它的编号范围里，所以这一问不用拆字符串。
 
@@ -357,3 +381,116 @@ namespace NRFramework.GameplayTags
 - 每个角色自己 `new` 容器。不要在 Job 里改同一份。
 - `GameplayTag` 和 `GameplayTagLink` 是值。`GameplayTagContainer`、`GameplayTagCountContainer`、`GameplayTagRequirements` 才是你 `new` 的对象。
 - `GameplayTagCatalog` 用编辑器创建。`GameplayTagLibrary` 和 `Tags` 不用 new。
+
+---
+
+## 接口一览
+
+下面是业务代码会碰到的接口。每一条只做一件事。
+
+### Tags
+
+保存配置生成。业务里直接点，不用 new。
+
+| 写法 | 作用 |
+| --- | --- |
+| `Tags.State.Control.Frozen` | 一个标签值。叶子就这样写。 |
+| `Tags.State.Control.Tag` | 这个节点下面还有子标签时，节点自己用 `.Tag`。 |
+| `Tags.TryGet("State.Burning", out tag)` | 手里是字符串时试着取出标签。没有这个名字就返回 false。 |
+
+### GameplayTag
+
+一个标签的值。从 `Tags.XXX` 拿，不要自己 new。
+
+| 写法 | 作用 |
+| --- | --- |
+| `tag.Name` | 点分名字，例如 `"State.Control.Frozen"`。可以拿去显示、存档。 |
+| `tag.IsNone` | 是不是空标签。 |
+| `GameplayTag.None` | 空标签。 |
+| `tag.IsParentOf(other)` | 自己是不是 other 的上级。自己和自己比，结果是 false。 |
+| `tag.IsSameOrParentOf(other)` | 自己就是 other，或者自己是它的上级。`HasTag` 内部用这一条。 |
+| `a == b` / `a != b` | 是不是同一个标签。 |
+| `tag.ToString()` | 空标签得到 `"None"`，否则得到 `Name`。 |
+
+`GameplayTag.Baked(...)` 是保存配置写进 `Tags.cs` 的。业务代码不要调用。
+
+### GameplayTagContainer
+
+一个人一份。只记有没有，同一条加第二次没有效果。
+
+| 写法 | 作用 |
+| --- | --- |
+| `new GameplayTagContainer()` | 做出这个人身上的清单。 |
+| `Body.Count` | 清单里现在有几条。 |
+| `Body.AddTag(tag)` | 把这一条写进清单。写进去返回 true。已经有了，或传入空标签，返回 false。 |
+| `Body.RemoveTag(tag)` | 从清单删掉名字完全一样的那一条。删掉了返回 true。清单里没有这一条，返回 false。不会连带删掉它下面的标签。 |
+| `Body.HasTagExact(tag)` | 清单里有没有名字完全一样的这一条。 |
+| `Body.HasTag(tag)` | 清单里有这一条，或者有它下面的某一条。 |
+| `Body.Clear()` | 清空这个人身上的标签。 |
+| `Body.CopyExplicitTags(list)` | 把清单里现有的标签复制进你给的 `List`。会先清空那个 List。 |
+
+### GameplayTagCountContainer
+
+同一条可以有好几份。减到 0 才算没有。
+
+| 写法 | 作用 |
+| --- | --- |
+| `new GameplayTagCountContainer()` | 做出一份计数容器。 |
+| `Burns.TagCount` | 现在有几种标签。这是种类数，不是份数加总。 |
+| `Burns.AddTag(tag)` | 这一条加 1 份，返回加上之后的份数。空标签返回 0。如果 `SetParent` 过，父容器也会加 1 份。 |
+| `Burns.RemoveTag(tag)` | 这一条减 1 份，返回剩下的份数。本来就没有，返回 0。父容器也会减 1 份。 |
+| `Burns.GetCount(tag)` | 这一条现在有几份。没有返回 0。只看这一条，不把下面的份数加进来。 |
+| `Burns.HasTagExact(tag)` | 这一条的份数大于 0。 |
+| `Burns.HasTag(tag)` | 这一条份数大于 0，或者它下面某一条份数大于 0。 |
+| `Burns.SetParent(hero)` | 把这一份算进 `hero`。已经加过的份数会一起算进去。 |
+| `Burns.SetParent(null)` | 卸下。只收回这一份自己的份数，父容器上别人的份数还在。 |
+
+### GameplayTagRequirements
+
+一次施放的条件。配好时 new 一次，每次施放拿容器去问。
+
+| 写法 | 作用 |
+| --- | --- |
+| `new GameplayTagRequirements()` | 做出一份条件。 |
+| `cast.Require(tag)` | 必须有这个标签。它下面的标签也算有。 |
+| `cast.Forbid(tag)` | 不能有这个标签。它下面的标签也算有，会拦住。 |
+| `cast.IsMet(Body)` | 条件过不过。`Body` 可以是有无容器，也可以是计数容器。 |
+| `cast.IsMet(Body, out blockedBy)` | 同上。不过时 `blockedBy` 是「缺少 某标签」或「不能有 某标签」。过了则 `blockedBy` 为 null。 |
+
+同一个标签不能又 `Require` 又 `Forbid`。空标签也不能写进条件。
+
+### GameplayTagLink
+
+在组件上点选一个标签。结构体，Unity 自己序列化。
+
+| 写法 | 作用 |
+| --- | --- |
+| `public GameplayTagLink Effect;` | Inspector 里点选。一般不用在代码里 new。 |
+| `new GameplayTagLink("State.Burning")` | 代码里按名字做一份链接。 |
+| `link.Name` | 存下来的名字。还没选时是空字符串。 |
+| `link.IsEmpty` | 还没选标签。 |
+| `link.Resolve()` | 换成 `GameplayTag`。这一条还没保存配置时，会告诉你哪个名字没导出。 |
+
+### GameplayTagLibrary
+
+静态类，不能 new。保存配置生成的代码会在加载时自己装表。
+
+| 写法 | 作用 |
+| --- | --- |
+| `GameplayTagLibrary.IsReady` | 导出的表装上了没有。 |
+| `GameplayTagLibrary.Get("State.Burning")` | 按字符串取标签。没有这个名字会抛异常，异常里写明要先保存配置。 |
+| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 按字符串试取。没有返回 false。 |
+| `GameplayTagLibrary.Use(catalog)` | 核对这份资源里的名字是不是都已经导出。有没导出的会指出名字。都有就什么也不做。 |
+| `GameplayTagLibrary.Install(map)` | 把导出的表装进来。生成的 `Tags.cs` 在加载时调用。业务代码不用自己调。 |
+
+平常用 `Tags.XXX`。手里只有字符串时才用 `Get` 或 `TryGet`。
+
+### GameplayTagCatalog
+
+标签表资源，在 `Assets/GameplayTags/GameplayTagCatalog`。编辑器创建和保存。运行时不要 `new`，也不要 `CreateInstance`。
+
+| 写法 | 作用 |
+| --- | --- |
+| `catalog.NoteCount` | 这份资源里写了几条注释。 |
+| `catalog.CopyTable()` | 复制出一份内存里的标签表。编辑器和 `Use` 在用。 |
+| `catalog.ReplaceWith(table)` | 用一份内存表覆盖资源。标签编辑器保存时用。业务代码不要调用。 |
