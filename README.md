@@ -297,33 +297,35 @@ public sealed class IgniteSkill : MonoBehaviour
 
 ---
 
-## 第 9 步：GameplayTagCatalog 和 GameplayTagLibrary
+## 第 9 步：存档里是一串字，和那个标签表文件
 
-`GameplayTagCatalog` 是第 1 步那个标签表资源。编辑器负责创建它。游戏运行时不要 `new`，也不要 `CreateInstance`。
-
-`GameplayTagLibrary` 是静态类，不能 `new`。保存配置生成的代码会在加载时自己调用 `Install`，把导出的标签交进来。业务代码不用自己装表。
-
-只有手里是字符串、不是 `Tags.XXX` 时才找它。`GameplayTagLink.Resolve()` 内部就是这样：
+平时挂灼烧，代码里直接写：
 
 ```csharp
-GameplayTag tag = GameplayTagLibrary.Get("State.Burning");
+Body.AddTag(Tags.State.Burning);
 ```
 
-开局如果想确认资源里的名字都已经导出，把标签表拖到脚本上，调用一次：
+这句在写代码时就能点出来。你知道这是灼烧。
+
+存档文件里存不下这句代码，只能存字。这个人身上有灼烧，你写进存档的是 `State.Burning`。下次读档，程序拿到的是一个变量，里面是这串字。这一行没有 `Tags.State.Burning` 可以点。
+
+`GameplayTagLibrary` 全游戏只有一份，不用 `new`。它把存档里的字换回和 `Tags.State.Burning` 同一个标签，然后才能往人身上挂：
 
 ```csharp
-public GameplayTagCatalog Catalog;
-
-void Awake()
-{
-    if (Catalog != null)
-        GameplayTagLibrary.Use(Catalog);
-}
+string saved = "State.Burning";                 // 存档里读出来的字
+GameplayTag tag = GameplayTagLibrary.Get(saved); // 换成标签
+Body.AddTag(tag);                                // 和 Body.AddTag(Tags.State.Burning) 相同
 ```
 
-`Use` 对不上时会指出哪一条还没点保存配置。对得上就什么也不做。平常只点 `Tags.XXX` 的项目，可以不调用它。
+| 存档里的字 | 结果 |
+| --- | --- |
+| `State.Burning`，并且点过保存配置 | 换成灼烧，挂到身上 |
+| `State.Burning`，改完图还没点保存配置 | `Get` 报错，提示先保存配置 |
+| 标签表里没有的名字 | `Get` 报错。改用 `TryGet` 则返回 false，身上不加 |
 
-`IsReady` 为 true 表示导出的表已经装上。
+一个人身上存了四个标签，读档就调用四次 `Get`。一百个人也是读档那一下换完，不是每帧换。不用给每个技能、每个人 `new` 一个 Library。
+
+`GameplayTagCatalog` 是 Project 里那个文件 `Assets/GameplayTags/GameplayTagCatalog`。点开它，Inspector 上的已登记、已写注释，就是这个文件。全游戏一份。改标签图再点保存配置，编辑器把图写进这个文件，并生成 `Tags.cs`。角色和技能的代码不问这个文件。
 
 ---
 
@@ -575,38 +577,58 @@ actor.Burns.AddTag(Effect.Resolve());
 | `Effect.Name` | 选中的名字，例如 `"State.Burning"`。 |
 | `Effect.Resolve()` | 把名字换成能 `AddTag` 的标签值。这一条还没保存配置时，会告诉你是哪个名字。 |
 
-### GameplayTagLibrary：手里只有一段字符串时才用
+### GameplayTagLibrary：存档里是一串字，点不到 Tags.XXX
 
-平时写 `Tags.State.Burning`。保存配置之后，生成的代码会自己把表装好，业务里不用 `new`，也不用自己装表。
-
-下拉框里选中的是一段字符串。`Effect.Resolve()` 内部就是按这段字符串来取。存档读出来也是字符串时，同样用它：
+平时挂灼烧，直接写：
 
 ```csharp
-GameplayTag tag = GameplayTagLibrary.Get("State.Burning");
-Body.AddTag(tag);
+Body.AddTag(Tags.State.Burning);
 ```
 
-名字在标签表里没有时，`Get` 会报错，并提示先点保存配置。不确定有没有这个名字时：
+写代码的时候你点得到 `Tags.State.Burning`，你知道这是灼烧。
+
+存档里存的不是这句代码，是一串字。这个人身上有灼烧，存进去的是 `State.Burning`。读档时这串字在变量里：
 
 ```csharp
-GameplayTag tag;
-if (GameplayTagLibrary.TryGet("State.Burning", out tag))
-    Body.AddTag(tag);
+string saved = "State.Burning"; // 从存档读出来的。这里没有 Tags.XXX 可以点
 ```
+
+你自己知道这是灼烧。这行代码只看见一串字，没法写成 `Tags.State.Burning`。`Get` 把这串字换成和 `Tags.State.Burning` 同一个标签，然后才能挂上：
+
+```csharp
+GameplayTag tag = GameplayTagLibrary.Get(saved); // 字换成标签
+Body.AddTag(tag);                                // 人身上有了灼烧
+```
+
+| 存档里的字 | 结果 |
+| --- | --- |
+| `State.Burning`，并且点过保存配置 | 换成灼烧，挂到身上 |
+| 改完标签图，还没点保存配置 | `Get` 报错，提示先保存配置 |
+| 标签表里没有这个名字 | `Get` 报错。`TryGet` 返回 false，身上不加 |
+
+全游戏只有这一份 Library，不用 `new`。一个人存了四个标签，读档调用四次 `Get`。一百个人也只在读档那一下换完。不是每个技能 new 一个，也不是每帧问一次。
+
+策划在下拉框里选中的同样是名字。`Effect.Resolve()` 内部就是这次 `Get`。
 
 | 写法 | 作用 |
 | --- | --- |
-| `GameplayTagLibrary.Get("State.Burning")` | 用字符串取出标签。没有这个名字会报错。 |
-| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 同样是取。没有这个名字时返回 false，不报错。 |
-| `GameplayTagLibrary.IsReady` | 导出的表装上了没有。保存配置之后，进游戏时一般已经是 true。 |
-| `GameplayTagLibrary.Use(catalog)` | 拿标签表资源对一遍名字。有没导出的会指出是哪一条。平常可以不调用。 |
+| `GameplayTagLibrary.Get("State.Burning")` | 把这串字换成标签。没有这个名字会报错。 |
+| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 同样是换。没有这个名字时返回 false。 |
+| `GameplayTagLibrary.IsReady` | 保存配置生成的表装上了没有。进游戏后一般已经是 true。 |
+| `GameplayTagLibrary.Use(catalog)` | 拿标签表文件对一遍名字。有没导出的会指出是哪一条。平常不用调用。 |
 
-### GameplayTagCatalog
+### GameplayTagCatalog：全游戏那一个标签表文件
 
-标签表资源，在 `Assets/GameplayTags/GameplayTagCatalog`。编辑器创建和保存。运行时不要 `new`，也不要 `CreateInstance`。
+你已经点开过它。Project 里的 `Assets/GameplayTags/GameplayTagCatalog`，Inspector 上「已登记 23」「已写注释 29」，就是这个文件里的内容。
+
+它不是人身上的容器，也不是技能上的规则。全游戏一份。你在标签图里改名字、连线，点保存配置，编辑器把图写进这个文件，同时生成 `Tags.cs`。
+
+角色和技能的代码不问这个文件。问身上有没有，用容器的 `HasTag`。问存档里的字，用上面的 `GameplayTagLibrary.Get`。
+
+`NoteCount`、`CopyTable`、`ReplaceWith` 是编辑器读写这个文件用的。技能脚本、角色脚本不要调用。
 
 | 写法 | 作用 |
 | --- | --- |
-| `catalog.NoteCount` | 这份资源里写了几条注释。 |
-| `catalog.CopyTable()` | 复制出一份内存里的标签表。编辑器和 `Use` 在用。 |
-| `catalog.ReplaceWith(table)` | 用一份内存表覆盖资源。标签编辑器保存时用。业务代码不要调用。 |
+| `catalog.NoteCount` | 这个文件里写了几条注释。 |
+| `catalog.CopyTable()` | 编辑器把文件读进内存。 |
+| `catalog.ReplaceWith(table)` | 点保存配置时，编辑器把图写回这个文件。 |
