@@ -224,13 +224,18 @@ bool stillBurning = Burns.HasTag(Tags.State.Burning);
 
 ---
 
-## 第 6 步：GameplayTagRequirements，这一下能不能放
+## 第 6 步：能不能放，直接问身上的容器
 
-这不是角色身上又一个容器，也不负责查询身上有没有标签。它是技能的条件单，拿第 3 步那个 `Body` 来问：这一下能不能放。
+能不能放，用第 3 步那个 `Body` 判断就行。必须正在施法，并且不能处于控制：
 
-必须有的标签都要有，不能有的标签一个都不能有。禁止「控制」时，冰冻和沉默都会拦住。
+```csharp
+bool canCast = Body.HasTag(Tags.State.Combat.Casting)
+    && !Body.HasTag(Tags.State.Control.Tag);
+```
 
-条件在技能配好时 `new` 一次，以后每次施放拿人身上的容器去问。不要每放一次就 new 一个。
+冰冻和沉默都挂在控制下面，`HasTag(控制)` 已经把它们算进去了。灼烧层数放在计数容器里时，把 `Body` 换成 `Burns`，还是这句 `HasTag`。
+
+`GameplayTagRequirements` 是把上面这两句收成一份清单，同一份条件要问很多技能时少写几行。只判断一两个标签，不用它。
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
@@ -240,19 +245,11 @@ cast.Forbid(Tags.State.Control.Tag);
 string blockedBy;
 if (cast.IsMet(Body, out blockedBy))
 {
-    // 可以放。Body 是第 3 步的 GameplayTagContainer。
-}
-else
-{
-    // blockedBy 是「缺少 State.Combat.Casting」或「不能有 State.Control」
+    // 和上面的 canCast 是同一个结果
 }
 ```
 
-计数容器也能拿来问，因为它和有无容器都实现了同一句 `HasTag`：
-
-```csharp
-cast.IsMet(Burns, out blockedBy);
-```
+没通过时，`blockedBy` 会写成「缺少 State.Combat.Casting」或「不能有 State.Control」。清单配好后留着，每次施放只调用 `IsMet`。
 
 ---
 
@@ -462,13 +459,18 @@ namespace NRFramework.GameplayTags
 | `Burns.SetParent(hero)` | 把这一份算进 `hero`。已经加过的份数会一起算进去。 |
 | `Burns.SetParent(null)` | 卸下。只收回这一份自己的份数，父容器上别人的份数还在。 |
 
-上面两个类就是业务里查身上有没有标签的全部。下面三个类不用来挂标签，也不用来做这个查询。
+上面两个类就是业务里查身上有没有标签的全部。能不能放，也是拿它们的 `HasTag` 来写。
 
-### GameplayTagRequirements：这一下能不能放
+### GameplayTagRequirements：同一份条件要问很多次时才用
 
-一份条件单。技能配好时 `new` 一次，以后每次施放拿角色身上的容器来问。
+直接写就够了：
 
-火球的例子：必须正在施法，而且不能处于控制。冰冻和沉默都挂在控制下面，身上有其中一个，这一下就不许放。
+```csharp
+bool canCast = Body.HasTag(Tags.State.Combat.Casting)
+    && !Body.HasTag(Tags.State.Control.Tag);
+```
+
+很多技能共用「必须施法、不能被控制」时，可以把这两句收成一份清单，省得每个技能各写一遍。只判断一两个标签，不用 `new` 这个类。
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
@@ -476,15 +478,10 @@ cast.Require(Tags.State.Combat.Casting);
 cast.Forbid(Tags.State.Control.Tag);
 
 string blockedBy;
-if (cast.IsMet(Body, out blockedBy))
-{
-    // 可以放
-}
-else
-{
-    // blockedBy 是「缺少 State.Combat.Casting」或「不能有 State.Control」
-}
+bool canCastToo = cast.IsMet(Body, out blockedBy);
 ```
+
+`canCastToo` 和上面的 `canCast` 是同一个结果。没通过时，`blockedBy` 写明缺哪条，或不能有哪条。`Body` 换成计数容器也行。
 
 | 写法 | 作用 |
 | --- | --- |
