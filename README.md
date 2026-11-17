@@ -282,9 +282,13 @@ bool stillControlled = hero.HasTag(Tags.State.Control.Tag);
 
 ---
 
-## 第 8 步：GameplayTagLink，在组件上选一个标签
+## 第 8 步：GameplayTagLink，给策划一个下拉框
 
-策划要在 Inspector 里点选一个标签，而不是写死在代码里。字段类型用 `GameplayTagLink`。它是结构体，Unity 会自己序列化，一般不用在代码里 `new`。
+前面的示例用不到它，场景里也不会自己出现。按 Q 的演示是代码里直接写 `Tags.State.Control.Frozen`。
+
+代码里已经知道是哪一个标签时，继续写 `Tags.XXX`，这一步跳过。
+
+要让策划在 Inspector 里自己选时，才把字段类型写成 `GameplayTagLink`。选中挂了这个脚本的物体，这一栏是一个下拉按钮，点开就是标签表里的名字，例如 `State/Burning`。选中的名字会存在这个组件上。
 
 ```csharp
 public sealed class IgniteSkill : MonoBehaviour
@@ -300,14 +304,7 @@ public sealed class IgniteSkill : MonoBehaviour
 }
 ```
 
-`Effect` 在资源里只存名字，例如 `State.Burning`。`Resolve()` 在播放时换成第 2 步那种标签值。用之前要先做过第 1 步的保存配置，否则 `Resolve()` 会告诉你哪一条还没导出。
-
-代码里确实要自己做一个链接时：
-
-```csharp
-GameplayTagLink link = new GameplayTagLink("State.Burning");
-GameplayTag tag = link.Resolve();
-```
+`Effect.IsEmpty` 表示策划还没选。`Effect.Resolve()` 把选中的名字换成 `Tags.State.Burning` 那种值，然后才能 `AddTag`。用之前先做过第 1 步的保存配置。这一条还没导出时，`Resolve()` 会告诉你是哪个名字。
 
 ---
 
