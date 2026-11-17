@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b094411b86150be479a763d633f0bbe2, type: 3}
+  m_Name: GameplayTagCatalog
+  m_EditorClassIdentifier: 
+  _explicitNames:
+  - State.Ailment.Bleed
+  - State.Ailment.Poison
+  - State.Burning
+  - State.Combat.Airborne
+  - State.Combat.Casting
+  - State.Combat.Dead
+  - State.Combat.Stagger
+  - State.Control.Blind
+  - State.Control.Fear
+  - State.Control.Frozen
+  - State.Control.Rooted
+  - State.Control.Silenced
+  - State.Control.Sleep
+  - State.Control.Stun
+  - State.Control.Taunt
+  - State.Guard.Invulnerable
+  - State.Guard.Shield
+  - State.Guard.SuperArmor
+  - State.Move.Haste
+  - State.Move.Slow
+  - State.Stealth.Invisible
+  - State.Stealth.Untargetable
+  - Test
+  _notes:
+  - Name: State
+    Description: "\u5168\u6E38\u620F\u5171\u7528\u7684\u72B6\u6001\u540D\u3002\u73A9\u5BB6\u3001\u602A\u7269\u3001\u88C5\u5907\u90FD\u7528\u8FD9\u4E00\u4EFD\u3002"
+  - Name: State.Ailment
+    Description: "\u6301\u7EED\u4F24\u5BB3\u3002\u4E2D\u6BD2\u3001\u6D41\u8840\u90FD\u7B97\u3002"
+  - Name: State.Ailment.Bleed
+    Description: "\u6D41\u8840\u3002\u6301\u7EED\u6389\u8840\u3002"
+  - Name: State.Ailment.Poison
+    Description: "\u4E2D\u6BD2\u3002\u6301\u7EED\u6389\u8840\u3002"
+  - Name: State.Burning
+    Description: "\u71C3\u70E7\u3002\u8C01\u8EAB\u4E0A\u6709\uFF0C\u8C01\u5C31\u5728\u70E7\u3002"
+  - Name: State.Combat
+    Description: "\u6218\u6597\u8FC7\u7A0B\u91CC\u7684\u52A8\u4F5C\u72B6\u6001\u3002"
+  - Name: State.Combat.Airborne
+    Description: "\u6D6E\u7A7A\u3002\u4EBA\u5728\u7A7A\u4E2D\u3002"
+  - Name: State.Combat.Casting
+    Description: "\u65BD\u6CD5\u4E2D\u3002\u8FD9\u4E00\u4E0B\u8FD8\u6CA1\u653E\u5B8C\u3002"
+  - Name: State.Combat.Dead
+    Description: "\u6B7B\u4EA1\u3002\u7B56\u5212\u7EA6\u5B9A\uFF1A\u4E0D\u80FD\u884C\u52A8\uFF0C\u4E5F\u4E0D\u80FD\u88AB\u9009\u4E3A\u76EE\u6807\u3002"
+  - Name: State.Combat.Stagger
+    Description: "\u786C\u76F4\u3002\u8FD9\u4E00\u4E0B\u88AB\u6253\u65AD\u3002"
+  - Name: State.Control
+    Description: "\u63A7\u5236\u3002\u4E0B\u9762\u4EFB\u4F55\u4E00\u6761\u5728\uFF0C\u95EE\u63A7\u5236\u90FD\u7B97\u6709\u3002"
+  - Name: State.Control.Blind
+    Description: "\u81F4\u76F2\u3002\u653B\u51FB\u66F4\u5BB9\u6613\u843D\u7A7A\u3002"
+  - Name: State.Control.Fear
+    Description: "\u6050\u60E7\u3002\u4E0D\u53D7\u63A7\u5236\u5730\u8FDC\u79BB\u6765\u6E90\u3002"
+  - Name: State.Control.Frozen
+    Description: "\u51B0\u51BB\uFF0C\u4E0D\u80FD\u884C\u52A8\u3002"
+  - Name: State.Control.Rooted
+    Description: "\u5B9A\u8EAB\u3002\u4E0D\u80FD\u79FB\u52A8\uFF0C\u53EF\u4EE5\u653B\u51FB\u548C\u653E\u6280\u80FD\u3002"
+  - Name: State.Control.Silenced
+    Description: "\u6C89\u9ED8\uFF0C\u4E0D\u80FD\u653E\u6280\u80FD\u3002"
+  - Name: State.Control.Sleep
+    Description: "\u7761\u7720\u3002\u4E0D\u80FD\u884C\u52A8\uFF0C\u53D7\u5230\u4F24\u5BB3\u4F1A\u9192\u6765\u3002"
+  - Name: State.Control.Stun
+    Description: "\u51FB\u6655\uFF0C\u4E0D\u80FD\u884C\u52A8\u3002"
+  - Name: State.Control.Taunt
+    Description: "\u5632\u8BBD\u3002\u53EA\u80FD\u653B\u51FB\u5632\u8BBD\u81EA\u5DF1\u7684\u90A3\u4E2A\u76EE\u6807\u3002"
+  - Name: State.Guard
+    Description: "\u9632\u62A4\u3002\u62A4\u76FE\u3001\u65E0\u654C\u3001\u9738\u4F53\u90FD\u7B97\u3002"
+  - Name: State.Guard.Invulnerable
+    Description: "\u65E0\u654C\u3002\u4E0D\u53D7\u4F24\u5BB3\u3002"
+  - Name: State.Guard.Shield
+    Description: "\u62A4\u76FE\u3002\u5148\u6263\u62A4\u76FE\uFF0C\u518D\u6263\u751F\u547D\u3002"
+  - Name: State.Guard.SuperArmor
+    Description: "\u9738\u4F53\u3002\u7B56\u5212\u7EA6\u5B9A\uFF1A\u8FD9\u6BB5\u65F6\u95F4\u4E0D\u5403\u786C\u76F4\u548C\u63A7\u5236\u3002"
+  - Name: State.Move
+    Description: "\u79FB\u52A8\u901F\u5EA6\u3002\u52A0\u901F\u548C\u51CF\u901F\u90FD\u7B97\u3002"
+  - Name: State.Move.Haste
+    Description: "\u52A0\u901F\u3002\u79FB\u52A8\u548C\u653B\u51FB\u66F4\u5FEB\u3002"
+  - Name: State.Move.Slow
+    Description: "\u51CF\u901F\u3002\u79FB\u52A8\u53D8\u6162\u3002"
+  - Name: State.Stealth
+    Description: "\u96BE\u4EE5\u88AB\u770B\u5230\u6216\u88AB\u9009\u4E2D\u3002"
+  - Name: State.Stealth.Invisible
+    Description: "\u9690\u8EAB\u3002\u654C\u4EBA\u9ED8\u8BA4\u770B\u4E0D\u89C1\u3002"
+  - Name: State.Stealth.Untargetable
+    Description: "\u4E0D\u53EF\u9009\u4E2D\u3002\u6280\u80FD\u4E0D\u80FD\u62FF\u5B83\u5F53\u76EE\u6807\u3002"

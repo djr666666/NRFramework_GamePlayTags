@@ -1,0 +1,7 @@
+.tag-grid {
+    --spacing: 18;
+    --thick-lines: 5;
+    --grid-background-color: rgb(28, 30, 36);
+    --line-color: rgba(255, 255, 255, 0.045);
+    --thick-line-color: rgba(255, 255, 255, 0.08);
+}

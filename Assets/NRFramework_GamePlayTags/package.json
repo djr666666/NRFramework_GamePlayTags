@@ -1,0 +1,9 @@
+{
+    "name": "com.nrframework.gameplaytags",
+    "version": "1.0.0",
+    "displayName": "NRFramework Gameplay Tags",
+    "description": "层次标签。策划在标签图里配置，保存配置后导出可直接点出来的代码。父子判断用深度优先的连续编号。",
+    "unity": "2021.3",
+    "author": "djr666666",
+    "dependencies": {}
+}
