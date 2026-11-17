@@ -449,33 +449,69 @@ namespace NRFramework.GameplayTags
 
 上面两个类就是业务里查身上有没有标签的全部。能不能放，也是拿它们的 `HasTag` 来写。
 
-### GameplayTagRequirements：决定放不放时，不用 new
+### GameplayTagRequirements：给技能写规则，把原因显示给玩家
 
-放火球就查自己身上的标签：
+程序员写 `HasTag` 时，自己知道是冰冻还是眩晕导致不放。玩家只看到放不出来。这个类按这个技能的规则再查一遍身上的标签，把没过的那一条变成一句字，给界面显示。
 
-```csharp
-bool canCast = Body.HasTag(Tags.State.Combat.Casting)
-    && !Body.HasTag(Tags.State.Control.Tag);
-if (canCast)
-    ShootFireball();
-```
+一条规则用一次 `Require` 或 `Forbid`。两条就写两行，四条就写四行。它按顺序问，停在第一条没过的上面。
 
-这就是放不放。不用 `new` 火球规则。
-
-`canCast` 为 false 时，只有一个 false，界面上写不出原因。要显示「缺少 State.Combat.Casting」或「不能有 State.Control」时，才 `new` 这个类。它问的还是上面这两句 `HasTag`，多出来的是那句原因。
+火球：必须正在施法，不能处于控制。冰冻、眩晕都挂在控制下面，写一条「不能有控制」就同时拦住这两个。
 
 ```csharp
 GameplayTagRequirements cast = new GameplayTagRequirements();
-cast.Require(Tags.State.Combat.Casting);
-cast.Forbid(Tags.State.Control.Tag);
+cast.Require(Tags.State.Combat.Casting); // 必须有：正在施法
+cast.Forbid(Tags.State.Control.Tag);     // 不能有：控制。冰冻、眩晕都算
 
 string blockedBy;
-bool ok = cast.IsMet(Body, out blockedBy);
+bool ok = cast.IsMet(Body, out blockedBy); // 拿这个玩家身上的标签对上面两行
 if (!ok)
+    Show(blockedBy); // 给玩家看这句字
+```
+
+身上有正在施法，也有冰冻：第一行过了，第二行不过。`ok` 是 false，`blockedBy` 是「不能有 State.Control」。玩家看到这句。
+
+圣光斩要四条：必须圣光，必须血量低于 20%，不能眩晕，不能冰冻。圣光和「血量低于 20%」先在标签图里加好，再点保存配置。血量是数字，这个类读不到。扣血扣到 20% 以下时，你自己 `Body.AddTag(Tags.State.LowHealth)`，回升后再 `RemoveTag`。
+
+```csharp
+GameplayTagRequirements holy = new GameplayTagRequirements();
+holy.Require(Tags.State.Holy);              // 必须有：圣光
+holy.Require(Tags.State.LowHealth);         // 必须有：血量低于 20% 时你挂上的那个标签
+holy.Forbid(Tags.State.Control.Stun);       // 不能有：眩晕
+holy.Forbid(Tags.State.Control.Frozen);     // 不能有：冰冻
+
+string blockedBy;
+bool ok = holy.IsMet(Body, out blockedBy);
+if (ok)
+    CastHolySlash();
+else
     Show(blockedBy);
 ```
 
-身上有正在施法、也有冰冻：第一句是 true，第二句也是 true。第二句要求不能有控制，所以 `ok` 是 false，`blockedBy` 是「不能有 State.Control」。
+四种结果：
+
+| 身上现在有什么 | blockedBy |
+| --- | --- |
+| 没挂圣光 | 缺少 State.Holy |
+| 有圣光，血量还高于 20%，没挂 LowHealth | 缺少 State.LowHealth |
+| 有圣光，有 LowHealth，并且眩晕 | 不能有 State.Control.Stun |
+| 有圣光，有 LowHealth，没有眩晕，但是冰冻 | 不能有 State.Control.Frozen |
+
+四条都过，`ok` 是 true，`blockedBy` 是 null，圣光斩放出去。
+
+示例标签里已经有的四条，不用新加名字。必须有护盾、必须正在施法，不能沉默、不能冰冻：
+
+```csharp
+GameplayTagRequirements smash = new GameplayTagRequirements();
+smash.Require(Tags.State.Guard.Shield);     // 必须有：护盾
+smash.Require(Tags.State.Combat.Casting);   // 必须有：正在施法
+smash.Forbid(Tags.State.Control.Silenced);  // 不能有：沉默
+smash.Forbid(Tags.State.Control.Frozen);    // 不能有：冰冻
+
+string blockedBy;
+bool ok = smash.IsMet(Body, out blockedBy);
+if (!ok)
+    Show(blockedBy); // 「缺少 State.Guard.Shield」或「不能有 State.Control.Frozen」
+```
 
 | 写法 | 作用 |
 | --- | --- |
