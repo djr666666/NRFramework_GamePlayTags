@@ -297,35 +297,31 @@ public sealed class IgniteSkill : MonoBehaviour
 
 ---
 
-## 第 9 步：存档里是一串字，和那个标签表文件
+## 第 9 步：存档只能存字符串，Get 负责转换回来
 
-平时挂灼烧，代码里直接写：
-
-```csharp
-Body.AddTag(Tags.State.Burning);
-```
-
-这句在写代码时就能点出来。你知道这是灼烧。
-
-存档文件里存不下这句代码，只能存字。这个人身上有灼烧，你写进存档的是 `State.Burning`。下次读档，程序拿到的是一个变量，里面是这串字。这一行没有 `Tags.State.Burning` 可以点。
-
-`GameplayTagLibrary` 全游戏只有一份，不用 `new`。它把存档里的字换回和 `Tags.State.Burning` 同一个标签，然后才能往人身上挂：
+`Tags.State.Burning` 是标签值，带编号。存档存不下这个值，编号下次点保存配置还会变。能写进存档的只有名字字符串。
 
 ```csharp
-string saved = "State.Burning";                 // 存档里读出来的字
-GameplayTag tag = GameplayTagLibrary.Get(saved); // 换成标签
-Body.AddTag(tag);                                // 和 Body.AddTag(Tags.State.Burning) 相同
+file.Write(Tags.State.Burning.Name); // 存："State.Burning"
 ```
 
-| 存档里的字 | 结果 |
-| --- | --- |
-| `State.Burning`，并且点过保存配置 | 换成灼烧，挂到身上 |
-| `State.Burning`，改完图还没点保存配置 | `Get` 报错，提示先保存配置 |
-| 标签表里没有的名字 | `Get` 报错。改用 `TryGet` 则返回 false，身上不加 |
+读档时读出来的还是这串字。`GameplayTagLibrary.Get` 只做转换：字符串换成当前的标签值。它不写存档，也不往人身上挂。换完再 `AddTag`。
 
-一个人身上存了四个标签，读档就调用四次 `Get`。一百个人也是读档那一下换完，不是每帧换。不用给每个技能、每个人 `new` 一个 Library。
+```csharp
+string saved = file.Read();                         // 读出来的字："State.Burning"
+GameplayTag tag = GameplayTagLibrary.Get(saved);    // 转换成标签值
+Body.AddTag(tag);                                   // 和 Body.AddTag(Tags.State.Burning) 相同
+```
 
-`GameplayTagCatalog` 是 Project 里那个文件 `Assets/GameplayTags/GameplayTagCatalog`。点开它，Inspector 上的已登记、已写注释，就是这个文件。全游戏一份。改标签图再点保存配置，编辑器把图写进这个文件，并生成 `Tags.cs`。角色和技能的代码不问这个文件。
+`Get` 查的是上次点「保存配置」导出的那张表，不是你刚在标签图上改、还没点保存的那一版。图上新加或改了名字，没点保存配置就 `Get` 这个新名字，会报错：
+
+`没有这个标签：State.Burning。在标签图里登记后点保存配置。`
+
+点过保存配置之后，同一个 `Get` 就转换成功。不想让它报错时用 `TryGet`，没有这个名字就返回 false，身上不加。
+
+全游戏只有一份 Library，不用 `new`。一个人存了四个名字，读档就 `Get` 四次，发生在读档那一下。
+
+`GameplayTagCatalog` 是 Project 里那个文件 `Assets/GameplayTags/GameplayTagCatalog`。点开它，Inspector 上的已登记、已写注释，就是这个文件。全游戏一份。改标签图再点保存配置，编辑器把图写进这个文件，并生成 `Tags.cs`。`Get` 用的就是这次生成的表。角色和技能的代码不问这个文件。
 
 ---
 
@@ -577,45 +573,37 @@ actor.Burns.AddTag(Effect.Resolve());
 | `Effect.Name` | 选中的名字，例如 `"State.Burning"`。 |
 | `Effect.Resolve()` | 把名字换成能 `AddTag` 的标签值。这一条还没保存配置时，会告诉你是哪个名字。 |
 
-### GameplayTagLibrary：存档里是一串字，点不到 Tags.XXX
+### GameplayTagLibrary：存档只能存字符串，Get 把字符串转换成标签值
 
-平时挂灼烧，直接写：
-
-```csharp
-Body.AddTag(Tags.State.Burning);
-```
-
-写代码的时候你点得到 `Tags.State.Burning`，你知道这是灼烧。
-
-存档里存的不是这句代码，是一串字。这个人身上有灼烧，存进去的是 `State.Burning`。读档时这串字在变量里：
+存档存不下 `Tags.State.Burning` 这个值。能存的是它的名字字符串。存的时候写 `Name`：
 
 ```csharp
-string saved = "State.Burning"; // 从存档读出来的。这里没有 Tags.XXX 可以点
+file.Write(Tags.State.Burning.Name); // 存进去的是 "State.Burning"
 ```
 
-你自己知道这是灼烧。这行代码只看见一串字，没法写成 `Tags.State.Burning`。`Get` 把这串字换成和 `Tags.State.Burning` 同一个标签，然后才能挂上：
+读的时候 `Get` 只做转换，把字符串换回标签值。它不写存档，也不挂到人身上。换完再 `AddTag`：
 
 ```csharp
-GameplayTag tag = GameplayTagLibrary.Get(saved); // 字换成标签
-Body.AddTag(tag);                                // 人身上有了灼烧
+string saved = file.Read();                      // "State.Burning"
+GameplayTag tag = GameplayTagLibrary.Get(saved); // 字符串转换成标签值
+Body.AddTag(tag);                                // 和 Body.AddTag(Tags.State.Burning) 相同
 ```
 
-| 存档里的字 | 结果 |
-| --- | --- |
-| `State.Burning`，并且点过保存配置 | 换成灼烧，挂到身上 |
-| 改完标签图，还没点保存配置 | `Get` 报错，提示先保存配置 |
-| 标签表里没有这个名字 | `Get` 报错。`TryGet` 返回 false，身上不加 |
+`Get` 查的是上次点「保存配置」导出的那张表。你在标签图里改了本地数据，没点保存配置，就 `Get` 这个新名字，会报错：
 
-全游戏只有这一份 Library，不用 `new`。一个人存了四个标签，读档调用四次 `Get`。一百个人也只在读档那一下换完。不是每个技能 new 一个，也不是每帧问一次。
+`没有这个标签：State.Burning。在标签图里登记后点保存配置。`
 
-策划在下拉框里选中的同样是名字。`Effect.Resolve()` 内部就是这次 `Get`。
+点过保存配置后再 `Get`，转换成功。用 `TryGet` 时，没有这个名字就返回 false，不报错，身上不加。
+
+全游戏只有一份，不用 `new`。读档时一个名字 `Get` 一次。策划下拉框里的 `Effect.Resolve()` 内部也是这次转换。
 
 | 写法 | 作用 |
 | --- | --- |
-| `GameplayTagLibrary.Get("State.Burning")` | 把这串字换成标签。没有这个名字会报错。 |
-| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 同样是换。没有这个名字时返回 false。 |
-| `GameplayTagLibrary.IsReady` | 保存配置生成的表装上了没有。进游戏后一般已经是 true。 |
-| `GameplayTagLibrary.Use(catalog)` | 拿标签表文件对一遍名字。有没导出的会指出是哪一条。平常不用调用。 |
+| `tag.Name` | 存档时取出字符串，例如 `"State.Burning"`。 |
+| `GameplayTagLibrary.Get("State.Burning")` | 把字符串转换成标签值。这个名字还没点保存配置就报错。 |
+| `GameplayTagLibrary.TryGet("State.Burning", out tag)` | 同样是转换。没有这个名字时返回 false，不报错。 |
+| `GameplayTagLibrary.IsReady` | 上次保存配置导出的表装上了没有。 |
+| `GameplayTagLibrary.Use(catalog)` | 拿标签表文件对一遍。有改过还没点保存配置的名字，会指出是哪一条。平常不用调用。 |
 
 ### GameplayTagCatalog：全游戏那一个标签表文件
 
