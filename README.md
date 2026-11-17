@@ -4,7 +4,7 @@
 
 支持 Unity **2021.3**、**2022.3**，以及 **Unity 6.0.6** 及以上。包上的 `2021.3` 是最低版本。
 
-下面按第一次使用的顺序写。先把名字做出来，再一个类一个类地 `new`。每一节只解决一件事。
+下面按第一次使用的顺序写。写业务时，每个角色只 `new` 一个容器，用来挂标签、问身上有没有。条件单、Inspector 下拉框、按字符串取标签都不是这件事，用到再看。
 
 ---
 
@@ -188,7 +188,9 @@ Body.RemoveTag(Tags.State.Control.Frozen); // 冰冻被卸掉
 
 ## 第 5 步：GameplayTagCountContainer，同一条要算几份
 
-火圈和火球都可以各挂一份灼烧。两份都在才算烧着，减到 0 才灭。这种用计数容器，不要用第 3 步的容器。
+这还是查角色身上有没有标签。和第 3 步是同一个活，只是同一条要记几份。
+
+火圈和火球都可以各挂一份灼烧。两份都在才算烧着，减到 0 才灭。这种才 `new` 计数容器。只问有没有、不用数份数，继续用第 3 步那个容器。
 
 ```csharp
 public GameplayTagCountContainer Burns { get; private set; }
@@ -224,7 +226,9 @@ bool stillBurning = Burns.HasTag(Tags.State.Burning);
 
 ## 第 6 步：GameplayTagRequirements，这一下能不能放
 
-技能的条件单独放一个对象。必须有的标签都要有，不能有的标签一个都不能有。禁止「控制」时，冰冻和沉默都会拦住，因为第 4 步的父标签规则在这里同样生效。
+这不是角色身上又一个容器，也不负责查询身上有没有标签。它是技能的条件单，拿第 3 步那个 `Body` 来问：这一下能不能放。
+
+必须有的标签都要有，不能有的标签一个都不能有。禁止「控制」时，冰冻和沉默都会拦住。
 
 条件在技能配好时 `new` 一次，以后每次施放拿人身上的容器去问。不要每放一次就 new 一个。
 
@@ -385,15 +389,21 @@ namespace NRFramework.GameplayTags
 ## 写的时候记住
 
 - 全游戏一张标签表。改了名字或连线，再点一次保存配置。
-- 每个角色自己 `new` 容器。不要在 Job 里改同一份。
-- `GameplayTag` 和 `GameplayTagLink` 是值。`GameplayTagContainer`、`GameplayTagCountContainer`、`GameplayTagRequirements` 才是你 `new` 的对象。
-- `GameplayTagCatalog` 用编辑器创建。`GameplayTagLibrary` 和 `Tags` 不用 new。
+- 查身上有没有标签，每个角色自己 `new` 一个容器。有没有用 `GameplayTagContainer`。同一条要叠几层，改用 `GameplayTagCountContainer`。两种都要，才各 `new` 一个。
+- `Tags.XXX` 是标签名字，不用 `new`。
+- 条件单、下拉框、按字符串取标签，不参与「身上有没有」。用不到就不用 `new`。
 
 ---
 
 ## 接口一览
 
-下面是业务代码会碰到的接口。每一条只做一件事。
+查角色身上有没有标签，就是下面两个类，做的是同一件事。
+
+- 只问有没有：`new GameplayTagContainer()`。
+- 同一条要算几份：改成 `new GameplayTagCountContainer()`。
+- 冰冻只问有没有、灼烧要叠层：这两个各 `new` 一个。
+
+不是五个类都要 `new`。`Tags.XXX` 只是传进去的名字。条件单、下拉框、字符串取标签放在这两个类后面，不看也不影响挂标签和查询。
 
 ### Tags
 
@@ -421,9 +431,9 @@ namespace NRFramework.GameplayTags
 
 `GameplayTag.Baked(...)` 是保存配置写进 `Tags.cs` 的。业务代码不要调用。
 
-### GameplayTagContainer
+### GameplayTagContainer：身上有没有
 
-一个人一份。只记有没有，同一条加第二次没有效果。
+一个人 `new` 一份。只记有没有，同一条加第二次没有效果。查询就是 `HasTag` 和 `HasTagExact`。
 
 | 写法 | 作用 |
 | --- | --- |
@@ -436,9 +446,9 @@ namespace NRFramework.GameplayTags
 | `Body.Clear()` | 清空这个人身上的标签。 |
 | `Body.CopyExplicitTags(list)` | 把清单里现有的标签复制进你给的 `List`。会先清空那个 List。 |
 
-### GameplayTagCountContainer
+### GameplayTagCountContainer：身上有没有，并且要算几份
 
-同一条可以有好几份。减到 0 才算没有。
+和第 3 步同一个活。同一条可以有好几份，减到 0 才算没有。不需要份数就不要 `new` 它。
 
 | 写法 | 作用 |
 | --- | --- |
@@ -452,7 +462,7 @@ namespace NRFramework.GameplayTags
 | `Burns.SetParent(hero)` | 把这一份算进 `hero`。已经加过的份数会一起算进去。 |
 | `Burns.SetParent(null)` | 卸下。只收回这一份自己的份数，父容器上别人的份数还在。 |
 
-下面三样都不是「给角色挂标签」。挂标签、问身上有没有，用前面的 `Body` 和 `Tags.XXX`。
+上面两个类就是业务里查身上有没有标签的全部。下面三个类不用来挂标签，也不用来做这个查询。
 
 ### GameplayTagRequirements：这一下能不能放
 
